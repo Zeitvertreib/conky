@@ -6,12 +6,14 @@ ds_dict = stunden.doppelstunden
 
 def find_current_DS(my_dict, now):
     now = str(now)
+    #  print("now", now)
     timestate = "pause"
     for key in my_dict.keys():
+        #  print("key: ", key)
         if my_dict[key][0] <= now:
             timestate = "pause"+str(key)
             #  print("works for key:", key)
-            #  print(my_dict[key][1])
+            #  print("my_dict[key][0]", my_dict[key][0], "key: ", key)
             if now <= my_dict[key][1]:
                 #  print("should hook here")
                 timestate = str(key)+".DS"

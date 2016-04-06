@@ -6,6 +6,9 @@
 Conky_loadup="$( cd "$( dirname "${BASH_SOURCE}" )/loadup" && pwd )"
 raw_conkyf=$Conky_loadup/conkyrc_raw
 finished_conkyf=$Conky_loadup/conkyrc_generated
+# echo $Conky_loadup
+# echo $raw_conkyf
+# echo $finished_conkyf
 # substitution to have it "portable"/ relative pathnames
 # remove conkyrc_generated when moving the containing dir
 insert_line1='template1 "${execpi 60 python3 '$Conky_loadup'/controller.py}"'
