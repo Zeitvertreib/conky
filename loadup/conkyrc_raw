@@ -48,7 +48,8 @@ replace_this1
 template2 $alignc${voffset -6}${stippled_hr 1}
 template3 $alignc
 template4 ${goto 110} $color2
-template5 $alignr${offset -10} $color
+template5 $color
+# template5 $alignr ${goto 110}  $color
 replace_this6
 replace_this7
 color1 F3B400
@@ -75,13 +76,25 @@ ${if_match $template1=="6.DS"}   $color1${endif} $alignr 16:40 - 18:10 | 6.DS |$
 ${if_match $template1=="pause6"}$color1${endif} $template2 $color
 ${if_match $template1=="7.DS"}   $color1${endif} $alignr 18:30 - 20:00 | 7.DS |$color
 ${if_match $template1=="pause8"}$color1${endif} $alignr - - - $color
-$template5$nodename $template4|Host $color
-$template5   $uptime $template4|Uptime $color
-$template5$mem/$memmax $template4|RAM $color
+
+$template5 $nodename        $template4 | Host $color
+$template5 $uptime          $template4 | Uptime $color
+$template5 $mem / $memmax   $template4 | RAM $color ${memperc}%
+$template5 ${swap} / ${swapmax} $template4 | Swap
 
 ${goto 100}$alignc${cpu cpu0}% $alignr${cpu cpu1}%
 ${goto 100}$alignc${freq 2} $alignr${freq 1}
 $alignr _Home
-${fs_free $template6}/${fs_size $template6} ${alignr}${fs_bar 8,60 $template6}$alignr
+${fs_free $template6} / ${fs_size $template6} ${alignr}${fs_bar 8,90 $template6}$alignr
 $alignr _Main
-${fs_free $template7}/${fs_size $template7} ${alignr}${fs_bar 8,60 $template7}$alignr
+${fs_free $template7} / ${fs_size $template7} ${alignr}${fs_bar 8,90 $template7}$alignr
+
+${color grey}Name          $alignr PID   CPU%   MEM%
+${color lightgrey} ${top name 1} $alignr ${top pid 1}   ${goto 150} ${top cpu 1} ${alignr} ${top mem 1}
+${color lightgrey} ${top name 2} $alignr ${top pid 2}   ${goto 150} ${top cpu 2} ${alignr} ${top mem 2}
+${color lightgrey} ${top name 3} $alignr ${top pid 3}   ${goto 150} ${top cpu 3} ${alignr} ${top mem 3}
+${color lightgrey} ${top name 4} $alignr ${top pid 4}   ${goto 150} ${top cpu 4} ${alignr} ${top mem 4}
+
+__BATTERY
+${battery_bar}
+${battery_time}
