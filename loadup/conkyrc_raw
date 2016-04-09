@@ -95,6 +95,6 @@ ${color lightgrey} ${top name 2} $alignr ${top pid 2}   ${goto 150} ${top cpu 2}
 ${color lightgrey} ${top name 3} $alignr ${top pid 3}   ${goto 150} ${top cpu 3} ${alignr} ${top mem 3}
 ${color lightgrey} ${top name 4} $alignr ${top pid 4}   ${goto 150} ${top cpu 4} ${alignr} ${top mem 4}
 
-__BATTERY
+$alignr __BATTERY
 ${battery_bar}
 ${battery_time}
