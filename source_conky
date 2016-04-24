@@ -14,12 +14,15 @@ finished_conkyf=$Conky_loadup/conkyrc_generated
 insert_line1='template1 "${execpi 60 python3 '$Conky_loadup'/controller.py}"'
 insert_line6='template6 '$HOME
 insert_line7='template7 '$HOME/xtern
+insert_block="$(python3 $Conky_loadup/woche.py)"
+# echo "-e $insert_block"
 
 if [ -f $raw_conkyf ] && [ ! -f $finished_conkyf ]; then
     echo fi for conky working
     sed "s%replace_this1%$insert_line1%g" < $raw_conkyf | \
     sed "s%replace_this6%$insert_line6%g"               | \
-    sed "s%replace_this7%$insert_line7%g"                 > $finished_conkyf
+    sed "s%replace_this7%$insert_line7%g"               | \
+    sed "s%replace_block%$(echo "$insert_block")%g"                 > $finished_conkyf
     conky -c $finished_conkyf -d -q
 fi
 
