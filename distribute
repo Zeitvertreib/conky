@@ -23,6 +23,7 @@ if [ -f $raw_conkyf ] && [ ! -f $finished_conkyf ]; then
     sed "s%replace_this6%$insert_line6%g"               | \
     sed "s%replace_this7%$insert_line7%g"               | \
     sed "s%replace_block%$(echo "$insert_block")%g"                 > $finished_conkyf
+    killall conky && sleep 0.3s
     conky -c $finished_conkyf -d -q
 fi
 
