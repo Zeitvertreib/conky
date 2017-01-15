@@ -1,0 +1,150 @@
+#! sh
+# echo "The script you are running has basename `basename $0`, dirname `dirname $0`"
+# echo "The script you are running has basename `basename "${BASH_SOURCE[0]}"`"
+# echo "The script you are running has basename `dirname "${BASH_SOURCE[1]}"`"
+# echo "The present working directory is `pwd`"
+Conky_loadup="$( cd "$( dirname "${BASH_SOURCE}" )/loadup" && pwd )"
+raw_conkyf=$Conky_loadup/conkyrc_raw
+finished_conkyf=$Conky_loadup/conkyrc_generated
+conky_shm="/dev/shm/my_conky"
+# echo $Conky_loadup
+# echo $raw_conkyf
+# echo $finished_conkyf
+# substitution to have it "portable"/ relative pathnames
+# remove conkyrc_generated when moving the containing dir
+# list=$(ls -a "$file_var"|grep .bash)
+# conkyarray=($Conky_loadup/rc/*header.rc)
+# conkyarray+=($Conky_loadup/rc/*[^0-9].rc)
+# readarray filess < <(ls $Conky_loadup/rc/ | grep [^0-9].rc)
+
+conky_array() {
+    #handle manipulating, pointer chose file
+    pointer=1 # erster eintrag geth auf 2
+    if [[ $1 != "" ]];then
+        pointer=$1
+    fi
+    declare -a conkyarray
+    . /dev/shm/my_conky
+
+    if [[ ${#conkyarray[@]} -gt 1 ]]; then
+        conkyarray[1]=$pointer
+        declare -p conkyarray > /dev/shm/my_conky
+        return
+    fi
+
+    conkyarray[1]=$pointer
+    conkyfiles=($Conky_loadup/rc/*[^0-9].rc)
+    conkyarray[2]=${#conkyfiles[@]}
+    conkyarray+=("${conkyfiles[@]}")
+    if [[ $1 != "" ]]; then
+        conkyarray[1]=$1
+    # else
+        # for i in "${conkyarray[@]}"
+        # do
+            # echo $i
+        # done
+    fi
+    declare -p conkyarray > /dev/shm/my_conky
+}
+
+conky_resolve(){
+    # . /dev/shm/my_conky
+    . $conky_shm
+    pointer=${conkyarray[1]}+2
+    # echo pointer: $pointer
+    conkyfile=${conkyarray[$pointer]}
+    echo $conkyfile
+}
+
+conky_shm(){
+    . /dev/shm/my_conky
+    for i in ${conkyarray[@]}
+    do
+        echo $i
+    done
+}
+
+make_pipe() {
+    mkfifo ~/tm/conkyP
+}
+
+conky_set() {
+    # unused
+    i=${1:-0}
+    # nconk=${#conkyarray[@]}
+    # echo hierentlang $$
+    export conky_use=${conkyarray[$i]}
+    echo i: $i, \$conky_use: $conky_use
+    package=($conkyarray, $i)
+    echo $package > ~/tmp/conkyP &
+    # echo ($conky_use, $i) > ~/tmp/conkyP &
+    echo conky set
+}
+
+var_set() {
+    echo $1 > ~/tmp/conkyP &
+}
+
+var_test() {
+    # ff=${$(cat < fachP):-"unset"}
+    # unlocked=false
+    unlocked=true
+    if ff=$(cat <$conkyPipe); then
+
+        export f1=$ff
+        # declare -g f1=$ff
+    fi
+    unlocked=true
+    # unlocked=false
+    echo $f1
+    # fach=$ff
+    # export $fach
+}
+
+var_call_test(){
+    while($unlocked); do
+        var_test
+        # sleep 2s;
+    done
+}
+
+conky_go(){
+    file=$(conky_resolve)
+    # echo $file
+    conky -c $(echo $file) &
+    sleep 2s
+    $! > /dev/shm/my_conkyPID$1
+}
+
+conky_go_org() {
+    pos=$conkyPipe[2j]
+    # if [[ $1 == "next" ]]; then
+
+    # conky -d -c ${conky_use} &
+    # conky -d -c ${conkyarray[< conkyP]} &
+    # $conky_use=< conkyP &
+    # echo \$conky_use: $conky_use
+    c_file=$conkyPipe[0]
+
+    # conky -d -c ${conky_use} &
+    conky -d -c $(cat <$c_file) &
+    sleep 2s # appearently need to loadup and dont mess w PID
+    things=$(pidof conky)
+    echo things: $things
+}
+
+
+# plug it in:
+org_conky="$HOME/.conkyrc"
+finished_conkyf_static=$Conky_loadup/conky_static
+conky1=$finished_conkyf_static
+
+if [ -f $finished_conkyf ] && [ ! -L $org_conky ]; then
+    mv $org_conky ${org_conky}_org
+    ln -s $finished_conkyf $org_conky
+    # conky -c $finished_conkyf -d -q
+fi
+
+run_conky() {
+    conky -c $conky1;
+}

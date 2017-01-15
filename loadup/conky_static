@@ -38,7 +38,7 @@ default_shade_color 000000
 default_outline_color 828282
 alignment top_right
 gap_x 12
-gap_y 250
+gap_y 132
 no_buffers yes
 uppercase no
 cpu_avg_samples 2
@@ -60,6 +60,27 @@ color3 ffffff
 #  Output
 ##############################################
 TEXT
-replace_this4
-replace_this5
+#${execp pwd}
+
+
+
+# $alignr $template1
+# $alignr $template3
 replace_block $color
+${alignr 90}$nodename $template4 | Host $color
+${alignr 75}$uptime $template4 | Uptime $color
+${alignr 66}$mem / $memmax $template4 | RAM $color ${memperc}%
+${alignr 95}${swap} / ${swapmax} $template4 | Swap
+
+${goto 100}$alignc${cpu cpu0}% $alignr${cpu cpu1}%
+${goto 100}$alignc${freq 2} $alignr${freq 1}
+${alignr}${fs_bar 8,90 $template6}$alignr :: ${fs_free $template6} / ${fs_size $template6}
+${alignr}${fs_bar 8,90 $template7}$alignr :: ${fs_free $template7} / ${fs_size $template7}
+
+${color grey}${goto 200}Name          $alignr ${goto 350}PID  ${goto 400} CPU%   MEM%
+${color lightgrey} ${goto 200} ${top name 1}  ${goto 350} ${top pid 1} ${goto 400}${top cpu 1} ${alignr} ${top mem 1}
+${color lightgrey} ${goto 200} ${top name 2}  ${goto 350} ${top pid 2} ${goto 400}${top cpu 2} ${alignr} ${top mem 2}
+
+$alignr __BATTERY
+${battery_bar}
+$alignr ${battery_time}  :: $battery_percent %

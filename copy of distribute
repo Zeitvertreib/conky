@@ -1,0 +1,176 @@
+#! sh
+# echo "The script you are running has basename `basename $0`, dirname `dirname $0`"
+# echo "The script you are running has basename `basename "${BASH_SOURCE[0]}"`"
+# echo "The script you are running has basename `dirname "${BASH_SOURCE[1]}"`"
+# echo "The present working directory is `pwd`"
+Conky_loadup="$( cd "$( dirname "${BASH_SOURCE}" )/loadup" && pwd )"
+raw_conkyf=$Conky_loadup/conkyrc_raw
+finished_conkyf=$Conky_loadup/conkyrc_generated
+conky_shm="/dev/shm/my_conky"
+# echo $Conky_loadup
+# echo $raw_conkyf
+# echo $finished_conkyf
+
+conk_ar(){
+    # IFS=", "
+    declare -a conkyarray
+    conkyarray=
+    mapfile -t conk_array < <(echo "$(./loadup/py/conky_array.py $Conky_loadup/rc/)")
+    echo ................................
+    IFS=";"
+    for i in "${conk_array[@]}"
+    do
+        echo $i
+        conkyarray+="$i"
+    done
+    # conkyarray=$cc
+    # conkyarray=$(echo $cc|tr ',' '\n')
+    # IFS=", "
+    # conkyarray[$i]=${#conkydirs[@]}
+    declare -p conkyarray > /dev/shm/my_conky
+    unset IFS
+}
+
+resolve_ddigit() {
+    ddigit=$1
+    export local d1=${ddigit:0:1}
+    export local d2=${ddigit:1:2}
+}
+
+get_d1r(){
+    baseoffset=3
+    stopper=$((${conkyarray[3]}+1))
+    echo $stopper
+    for (( i=$1; i < $stopper; i++))
+    do
+        baseoffset=${conkyarray[$($baseoffset+1)]}
+    done
+    echo ${conkyarray[$baseoffset]}
+}
+
+
+
+conky_array() {
+    #handle manipulating, pointer chose file
+    resolve_ddigit $1
+
+    declare -a conkyarray
+    . /dev/shm/my_conky
+
+    if [[ ${#conkyarray[@]} -gt 3 ]]; then
+        conkyarray[1]=$d1+$d2
+        if [[ $2 != "resolve" ]];then
+            # omit the following to preserve info about running conky
+            get_d1r $d1
+            conkyarray[3]=${conkyarray[$(($pointer+3))]}
+        fi
+        declare -p conkyarray > /dev/shm/my_conky
+        return
+    fi
+
+    conkyarray[1]=$pointer
+    # conkyfiles=($Conky_loadup/rc/*/*[^0-9].rc)
+    # conkyfiles=($Conky_loadup/rc/*/*.rc)
+    # conkyfiles=($Conky_loadup/rc/*/)
+    conkydirs=($Conky_loadup/rc/*/)
+
+    conkyarray[2]="x"
+
+    i=3
+    conkyarray[$i]=${#conkydirs[@]}
+    for cf in $conkydirs; do
+        IFS=";"
+        cfx=($cf*.rc)
+        IFS=" "
+        conkyarray[$i]=${cfx[@]}
+        conkyarray+=$cfx
+        $i=$(($i+conkyarra[$i]+1))
+    done
+
+    conkyarray[4]=
+    conkyarray+=("${conkydirs[@]}")
+    # translates to the first that is pointed to.. later this will be the current running conk
+    conkyarray[2]=${conkyarray[(3+2)]}
+    # conkyarray[3]=${conkyarray[$(($pointer+3))]}
+    # conkyarray[3]=echo $(conkyarray[$pointer+3])
+    # if [[ $1 != "" ]]; then
+        # conkyarray[1]=$1
+    # fi
+    declare -p conkyarray > /dev/shm/my_conky
+}
+
+conky_resolve(){
+    # . /dev/shm/my_conky
+    . $conky_shm
+    # embeded conkyarray is off by 3
+    pointer=${conkyarray[1]}+3
+    # echo pointer: $pointer
+    conkyfile=${conkyarray[$pointer]}
+    if [[ $1 == "loaded" ]]; then
+        # echo named
+        conkyfile=${conkyarray[3]}
+    fi
+    if [[ $1 == "name" ]]; then
+        conkyfile=${conkyfile##/*/}
+        conkyfile=${conkyfile%.*}
+    fi
+    echo $conkyfile
+}
+
+conky_shm(){
+    . $conky_shm
+    if [[ $1 == "clean" ]]; then
+        rm $conky_shm
+        if [[ $(ps aux|grep conky) ]];then
+            ps aux|grep conky|awk {'print $2'} | xargs kill -9
+            echo running conky terminated
+        fi
+        return
+    fi
+
+    for i in ${conkyarray[@]}
+    do
+        echo $i
+    done
+}
+
+conky_go(){
+    if [[ $1 == "up" ]];then
+        . $conky_shm
+        echo up
+        # kill always by name, cuz position number can be set; name is calculated
+        ps aux|grep conky|grep $(echo $(conky_resolve)) |awk {'print $2'} | xargs kill -9
+
+        currPOS=${conkyarray[1]}
+        echo $currPOS
+        currPOS=$((${conkyarray[1]}+1))
+        if [[ $currPOS -gt ${conkyarray[2]} ]]; then
+            currPOS=1
+        fi
+        conky_array $currPOS resolve
+        echo new selected conky pos $currPOS $(conky_resolve name)
+    fi
+    . $conky_shm
+    file=$(conky_resolve)
+    # echo $file
+    runPID="conky -d -c $(echo $file)"
+    $runPID &
+    echo $!
+    sleep 2s
+    $! > /dev/shm/my_conkyPIDa
+}
+
+# plug it in:
+org_conky="$HOME/.conkyrc"
+finished_conkyf_static=$Conky_loadup/conky_static
+conky1=$finished_conkyf_static
+
+if [ -f $finished_conkyf ] && [ ! -L $org_conky ]; then
+    mv $org_conky ${org_conky}_org
+    ln -s $finished_conkyf $org_conky
+    # conky -c $finished_conkyf -d -q
+fi
+
+run_conky() {
+    conky -c $conky1;
+}

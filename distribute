@@ -1,0 +1,248 @@
+#! sh
+# echo "The script you are running has basename `basename $0`, dirname `dirname $0`"
+# echo "The script you are running has basename `basename "${BASH_SOURCE[0]}"`"
+# echo "The script you are running has basename `dirname "${BASH_SOURCE[1]}"`"
+# echo "The present working directory is `pwd`"
+Conky_loadup="$( cd "$( dirname "${BASH_SOURCE}" )/loadup/rc/" && pwd )"
+raw_conkyf=$Conky_loadup/conkyrc_raw
+finished_conkyf=$Conky_loadup/conkyrc_generated
+conky_shm="/dev/shm/my_conky"
+# echo $Conky_loadup
+# echo $raw_conkyf
+# echo $finished_conkyf
+resolve_ddigit() {
+    local ddigit=$1
+    d1=${ddigit:0:1}
+    d2=${ddigit:1:2}
+    # echo d1: $d1\; d2: $d2
+}
+
+jumpjunk(){
+    off=$(( $1+1 ))
+    # off=2
+    offset=${conkyarray[$off]}
+    echo $offset
+}
+
+res_dir() {
+    local off=2
+    local target=$1
+    # local m_count_dirs=$( jumpjunk 2 )
+    local m_count_dirs=${conkyarray[$off]}
+    # echo $m_count_dirs
+    local pointer=$(($m_count_dirs+$off))
+    # jumpjunk $pointer
+    # echo pointer pre $pointer
+    # num_content=0
+    # echo ${conkyarray[$pointer]}
+    nodiggi='[^0-9]'
+    if [[ $target =~ $nodiggi ]]; then
+        echo is nodigit
+    fi
+
+    if (( $target <= $m_count_dirs )); then
+        # echo does if
+        for (( i=1; i<$target; i++))
+        do
+            local num_content=$pointer
+            # echo done, i: $target, num_content: $num_content
+            local pointer=$(( $pointer + $( jumpjunk $pointer ) +1 ))
+            # pointer=${conkyarray[($off+$m_count_dirs)]
+        done
+    fi
+
+    # echo final pointer: $pointer
+    local m_count_files=$(( $pointer ))
+    # m_count_files=${conkyarray[$(($pointer))]}
+    local stop_count=${conkyarray[$(($pointer+1))]}
+    # use this as delimiter
+    num_content=$stop_count
+    # echo m_count_files: $m_count_files
+    # echo stop_count: $stop_count
+    local stop_count=$(($stop_count+1))
+    local f_target=$2
+    # doesnt catch 0
+    if [[ ( $f_target < 1 ) ]]; then
+        f_target=$num_content
+        d2=$f_target
+
+    fi
+    if [[ (! $f_target < $stop_count ) ]];then
+        f_target=1
+        d2=$f_target
+    fi
+
+    local tf=$(($m_count_files+$f_target+1))
+    resolved_f=${conkyarray[$tf]}
+    echo res_dir done
+}
+
+dirs(){
+    . $conky_shm
+    resolve_ddigit $1
+    echo digit seperated: ${d1} ${d2}
+    res_dir ${d1} ${d2}
+    local tt=${conkyarray[1]}
+    echo $tt
+    local tt=${tt##/*/}
+    if [[ $(ps aux|grep "conky -q"| grep "$tt" ) ]];then
+        echo term condition tt: $tt
+        ps aux|grep conky|grep "$tt" |awk {'print $2'} | xargs kill -9
+        # ps aux|grep conky|awk {'print $2'} | xargs kill -9
+        echo running conky terminated
+    fi
+    declare -a conkyarray
+    conkyarray=()
+    conkyarray+=( ${d1}${d2} )
+    conkyarray+=( "${resolved_f}" )
+    # conkyarray+=( 'curr_file' )
+
+    conkydirs=($Conky_loadup/generated/*/)
+    conkyarray+=("${#conkydirs[@]}")
+    conkyarray+=("${conkydirs[@]}")
+
+    for i in "${conkydirs[@]}"
+    do
+        # conkyarray+=(echo $($i/*))
+        cm=("$i"*)
+        conkyarray+=("${#cm[@]}")
+        conkyarray+=("${cm[@]}")
+    done
+
+    # for i in "${conkyarray[@]}"
+    # do
+        # echo $i
+    # done
+    if [[ $2 == "go" ]]; then
+        conky -q -c"${conkyarray[1]}" &
+    fi
+
+    declare -p conkyarray > $conky_shm
+    # declare -p conkyarray > /dev/shm/my_conky
+}
+
+conky_array() {
+    #handle manipulating, pointer chose file
+    pointer=11 # erster eintrag geth auf 4
+    if [[ $1 != "" ]];then
+        pointer=$1
+    fi
+    declare -a conkyarray
+    . /dev/shm/my_conky
+
+    if [[ ${#conkyarray[@]} -gt 3 ]]; then
+        conkyarray[1]=$pointer
+        if [[ $2 != "resolve" ]];then
+            # omit the following to preserve info about running conky
+            conkyarray[3]=${conkyarray[$(($pointer+3))]}
+        fi
+        declare -p conkyarray > /dev/shm/my_conky
+        return
+    fi
+
+    conkyarray[1]=$pointer
+    # conkyfiles=($Conky_loadup/rc/*/*[^0-9].rc)
+    # conkyfiles=($Conky_loadup/rc/*/*.rc)
+    # conkyfiles=($Conky_loadup/rc/*/)
+    conkydirs=($Conky_loadup/generated/*/)
+
+    conkyarray[2]="x"
+
+    i=3
+    conkyarray[$i]=${#conkydirs[@]}
+    for cf in $conkydirs; do
+        IFS=";"
+        cfx=($cf*.rc)
+        IFS=" "
+        conkyarray[$i]=${cfx[@]}
+        conkyarray+=$cfx
+        $i=$(($i+conkyarra[$i]+1))
+    done
+
+    conkyarray[4]=
+    conkyarray+=("${conkydirs[@]}")
+    # translates to the first that is pointed to.. later this will be the current running conk
+    conkyarray[2]=${conkyarray[(3+2)]}
+    # conkyarray[3]=${conkyarray[$(($pointer+3))]}
+    # conkyarray[3]=echo $(conkyarray[$pointer+3])
+    # if [[ $1 != "" ]]; then
+        # conkyarray[1]=$1
+    # fi
+    declare -p conkyarray > /dev/shm/my_conky
+}
+
+conky_resolve(){
+    # . /dev/shm/my_conky
+    . $conky_shm
+    # embeded conkyarray is off by 3
+    pointer=${conkyarray[1]}+3
+    # echo pointer: $pointer
+    conkyfile=${conkyarray[$pointer]}
+    if [[ $1 == "loaded" ]]; then
+        # echo named
+        conkyfile=${conkyarray[3]}
+    fi
+    if [[ $1 == "name" ]]; then
+        conkyfile=${conkyfile##/*/}
+        conkyfile=${conkyfile%.*}
+    fi
+    echo $conkyfile
+}
+
+conky_shm(){
+    . $conky_shm
+    if [[ $1 == "clean" ]]; then
+        rm $conky_shm
+        if [[ $(ps aux|grep conky) ]];then
+            ps aux|grep conky|awk {'print $2'} | xargs kill -9
+            echo running conky terminated
+        fi
+        return
+    fi
+
+    for i in "${conkyarray[@]}"
+    do
+        echo $i
+    done
+}
+
+conky_go(){
+    if [[ $1 == "up" ]];then
+        . $conky_shm
+        echo up
+        # kill always by name, cuz position number can be set; name is calculated
+        ps aux|grep conky|grep $(echo $(conky_resolve)) |awk {'print $2'} | xargs kill -9
+
+        currPOS=${conkyarray[1]}
+        echo $currPOS
+        currPOS=$((${conkyarray[1]}+1))
+        if [[ $currPOS -gt ${conkyarray[2]} ]]; then
+            currPOS=1
+        fi
+        conky_array $currPOS resolve
+        echo new selected conky pos $currPOS $(conky_resolve name)
+    fi
+    . $conky_shm
+    file=$(conky_resolve)
+    # echo $file
+    runPID="conky -d -c $(echo $file)"
+    $runPID &
+    echo $!
+    sleep 2s
+    $! > /dev/shm/my_conkyPIDa
+}
+
+# plug it in:
+org_conky="$HOME/.conkyrc"
+finished_conkyf_static=$Conky_loadup/conky_static
+conky1=$finished_conkyf_static
+
+if [ -f $finished_conkyf ] && [ ! -L $org_conky ]; then
+    mv $org_conky ${org_conky}_org
+    ln -s $finished_conkyf $org_conky
+    # conky -c $finished_conkyf -d -q
+fi
+
+run_conky() {
+    conky -c $conky1;
+}

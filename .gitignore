@@ -1,3 +1,8 @@
-conkyrc_generated
+conkyrc_generated*
+*.ipynb
 *.pyc
 __pycache__/
+fehlersuche/
+html/
+faecher/
+rc/
